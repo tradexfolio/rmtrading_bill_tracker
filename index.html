@@ -771,7 +771,6 @@ try {
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-  // Using your specific credentials from image_48d51e.png
   const firebaseConfig = {
     apiKey: "AIzaSyAMehxkMN7o9BmOkBXNaDpxtI7hlRMLcxQ",
     authDomain: "rm-bill-tracker.firebaseapp.com",
@@ -781,71 +780,76 @@ try {
     appId: "1:6527911683:web:6909ac50314284b4d30b36"
   };
 
-  // Initialize
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // --- NEW ADD BILL FUNCTION ---
+  // --- OVERRIDE THE ADD BILL FUNCTION ---
   window.addBill = async function() {
-    const partyInput = document.querySelector('input[placeholder*="Al Baraka"]');
-    const amountInput = document.querySelector('input[placeholder="0"]');
-    const dateInput = document.querySelector('input[type="date"]');
-    const receivedInput = document.querySelectorAll('input[placeholder="0"]')[1];
+    const dateEl = document.getElementById('billDate');
+    const partyEl = document.getElementById('partyName');
+    const amtEl = document.getElementById('billAmount');
+    const recEl = document.getElementById('received');
 
-    if (!partyInput.value || !amountInput.value) {
-      alert("Please enter a party name and amount.");
-      return;
-    }
+    // Simple validation
+    let valid = true;
+    [dateEl, partyEl, amtEl].forEach(el => {
+      if (!el.value.trim()) { el.classList.add('err'); valid = false; }
+      else el.classList.remove('err');
+    });
+    if (!valid) return;
+
+    const amount = parseFloat(amtEl.value) || 0;
+    const received = Math.min(parseFloat(recEl.value) || 0, amount);
 
     const billData = {
-      date: dateInput.value,
-      partyName: partyInput.value,
-      billAmount: parseFloat(amountInput.value),
-      receivedAmount: parseFloat(receivedInput.value) || 0,
-      timestamp: new Date()
+      date: dateEl.value,
+      party: partyEl.value.trim(),
+      amount: amount,
+      received: received,
+      timestamp: new Date() // For sorting
     };
 
     try {
-      // Saves to the 'bills' collection in your image_485d77.png database
+      // Save to your Firestore 'bills' collection
       await addDoc(collection(db, "bills"), billData);
       
-      // Clear inputs
-      partyInput.value = '';
-      amountInput.value = '0';
-      receivedInput.value = '0';
+      // Reset form
+      partyEl.value = ''; amtEl.value = ''; recEl.value = '';
+      dateEl.value = new Date().toISOString().split('T')[0];
+      partyEl.focus();
       
-      // Refresh the list
-      loadBills();
+      // Reload UI
+      loadBillsFromCloud();
     } catch (e) {
-      console.error("Error adding bill: ", e);
-      alert("Failed to save bill. Check your Firestore rules.");
+      console.error("Cloud Save Error:", e);
+      alert("Error saving to database. Check your Firestore rules.");
     }
   };
 
-  // --- FUNCTION TO LOAD BILLS ---
-  async function loadBills() {
-    const q = query(collection(db, "bills"), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
-    const billsList = [];
-    querySnapshot.forEach((doc) => {
-      billsList.push(doc.data());
-    });
-    
-    // Check if your existing render function is available
-    if (typeof render === 'function') {
-      render(billsList);
-    } else {
-      console.log("Bills loaded from Firebase:", billsList);
+  // --- CLOUD FETCH FUNCTION ---
+  window.loadBillsFromCloud = async function() {
+    try {
+      const q = query(collection(db, "bills"), orderBy("timestamp", "desc"));
+      const querySnapshot = await getDocs(q);
+      const cloudBills = [];
+      querySnapshot.forEach((doc) => {
+        cloudBills.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // Update the global 'bills' array and trigger your existing render()
+      window.bills = cloudBills;
+      if (typeof render === 'function') render();
+    } catch (e) {
+      console.error("Cloud Load Error:", e);
     }
-  }
+  };
 
-  // Monitor login status
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      loadBills();
+      loadBillsFromCloud();
     } else {
-      console.log("Not logged in. Please sign in via the Firebase console for now.");
+      console.log("No user logged in.");
     }
   });
 </script>
