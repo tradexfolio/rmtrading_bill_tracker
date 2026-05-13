@@ -766,5 +766,24 @@ try {
   if (saved) { bills = JSON.parse(saved); render(); }
 } catch(e) {}
 </script>
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMehxkMN7o9BmOkBXNaDpxtI7hlRMLcxQ",
+    authDomain: "rm-bill-tracker.firebaseapp.com",
+    projectId: "rm-bill-tracker",
+    storageBucket: "rm-bill-tracker.firebasestorage.app",
+    messagingSenderId: "6527911683",
+    appId: "1:6527911683:web:6909ac50314284b4d30b36"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
 </body>
 </html>
